@@ -1,4 +1,4 @@
-# mqtt-km200
+# mqtt2influxdb
 
 [![NPM version](https://badge.fury.io/js/mqtt2influxdb.svg)](http://badge.fury.io/js/mqtt2influxdb)
 [![Dependency Status](https://img.shields.io/gemnasium/krambox/mqtt2influxdb.svg?maxAge=2592000)](https://gemnasium.com/github.com/krambox/mqtt2influxdb)
