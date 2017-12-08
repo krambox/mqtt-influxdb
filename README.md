@@ -3,7 +3,7 @@
 [![NPM version](https://badge.fury.io/js/mqtt2influxdb.svg)](http://badge.fury.io/js/mqtt2influxdb)
 [![Dependency Status](https://img.shields.io/gemnasium/krambox/mqtt2influxdb.svg?maxAge=2592000)](https://gemnasium.com/github.com/krambox/mqtt2influxdb)
 [![Build Status](https://travis-ci.org/krambox/mqtt2influxdb.svg?branch=master)](https://travis-ci.org/krambox/mqtt2influxdb)
-[![Maintainability](https://api.codeclimate.com/v1/badges/323bbf948a25557a2406/maintainability)](https://codeclimate.com/github/krambox/mqtt2influxdb/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/5d067b962208f5007609/maintainability)](https://codeclimate.com/github/krambox/mqtt2influxdb/maintainability)
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
