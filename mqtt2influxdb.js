@@ -31,7 +31,10 @@ mqtt.on('connect', function () {
   influx = new Influx.InfluxDB({
     host: config['influxHost'],
     port: config['influxPort'],
-    database: config['influxDb']
+    database: config['influxDb'],
+    pool: {
+      requestTimeout: 5000
+    }
   });
   influx.ping(5000).then(hosts => {
     hosts.forEach(host => {
@@ -40,6 +43,7 @@ mqtt.on('connect', function () {
         log.log(`${host.url.host} responded in ${host.rtt}ms running ${host.version})`);
         mqtt.publish(config.name + '/connected', '2', { retain: true });
       } else {
+        mqtt.publish(config.name + '/connected', '1', { retain: true });
         log.error(`${host.url.host} is offline :(`);
       }
     });
@@ -93,11 +97,22 @@ function writeInflux () {
   if (!bufferCount) return;
   if (!influxDBConnected) return;
   log.debug('write', bufferCount);
-
   influx.writePoints(buffer).then(() => {
     log.debug('wrote');
   }).catch(err => {
-    console.error(`Error saving data to InfluxDB! ${err.stack}`);
+    log.error(`Error saving data to InfluxDB! ${err.stack}`);
+  });
+  influx.ping(5000).then(hosts => {
+    hosts.forEach(host => {
+      if (host.online) {
+        influxDBConnected = true;
+        log.log(`${host.url.host} responded in ${host.rtt}ms running ${host.version})`);
+        mqtt.publish(config.name + '/connected', '2', { retain: true });
+      } else {
+        mqtt.publish(config.name + '/connected', '1', { retain: true });
+        log.error(`${host.url.host} is offline :(`);
+      }
+    });
   });
 
   buffer = [];
