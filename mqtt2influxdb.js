@@ -1,83 +1,106 @@
 #!/usr/bin/env node
-var mqtt    = require('mqtt');
-var influx = require('influx');
+var pkg = require('./package.json');
+var Mqtt = require('mqtt');
+var Influx = require('influx');
+var log = require('yalm');
+var config = require('./config.js');
+log.setLevel(config.verbosity);
 
-var username = 'root';
-var password = 'root';
-var database = 'home';
-var influxClient = influx({host : 'localhost', username : username, password : password, database : database});
+var mqttConnected;
+var influxDBConnected;
 
+var buffer = [];
+var bufferCount = 0;
 
-var client  = mqtt.connect('mqtt://mac-server.local');
+var influx;
 
+log.info(pkg.name + ' ' + pkg.version + ' starting');
+log.info('mqtt trying to connect', config.url);
+var mqtt = Mqtt.connect(config.url, { will: { topic: config.name + '/connected', payload: '0', retain: true } });
 
-var fs = require('fs');
-var util = require('util');
-var csv = fs.createWriteStream(__dirname + '/km200.csv', {flags : 'a'});
+mqtt.on('connect', function () {
+  mqttConnected = true;
 
+  log.info('mqtt connected', config.url);
+  mqtt.publish(config.name + '/connected', '1', { retain: true });
 
-var topics = [
-  //'km200/gateway/DateTime',
-  'km200/system/sensors/temperatures/outdoor_t1',
-  'km200/system/sensors/temperatures/chimney',
-  'km200/system/sensors/temperatures/hotWater_t1',
-  'km200/system/sensors/temperatures/supply_t1_setpoint',
-  'km200/system/sensors/temperatures/supply_t1',
-  'km200/heatSources/flameCurrent',
-  'km200/heatSources/numberOfStarts',
-  'km200/heatSources/actualPower',
-  'km200/heatSources/powerSetpoint',
-  'km200/heatSources/workingTime/totalSystem',
-  'km200/heatSources/workingTime/secondBurner',
-  'km200/heatSources/workingTime/centralHeating',
-  'km200/dhwCircuits/dhw1/workingTime',
-  'km200/dhwCircuits/dhw1/setTemperature',
-  'km200/heatingCircuits/hc1/roomtemperature',
-  'km200/heatingCircuits/hc1/temperatureRoomSetpoint',
-  'eibd/0/1/0',
-  'eibd/2/1/0',
-  'eibd/2/1/1',
-  'eibd/2/1/10',
-  'eibd/2/1/11',
-  'eibd/2/1/12'
-];
+  log.info('mqtt subscribe', config.name + '/set/#');
+  mqtt.subscribe(config.name + '/set/#');
 
-var dataCache = {};
-var changeCache = {};
-
-
-for(var i=0;i<topics.length;++i) {
-  client.subscribe(topics[i]);
-}
-
-client.on('message', function (topic, message) {
-    if (dataCache[topic.toString()] != message) {
-      dataCache[topic.toString()] = message;
-      var point = { value : parseFloat(message)};
-      influxClient.writePoint(topic, point , function(err) {
-        if(err) console.log(err); else console.log(topic,point);
-      });      
-    }
-    else {
-      console.log("unchanged",topic);
-    }
-    dataCache[topic.toString()] = message.toString();
+  influx = new Influx.InfluxDB({
+    host: config['influx-host'],
+    port: config['influx-port'],
+    database: config['influx-db']
+  });
+  influx.ping(5000).then(hosts => {
+    hosts.forEach(host => {
+      if (host.online) {
+        influxDBConnected = true;
+        log.log(`${host.url.host} responded in ${host.rtt}ms running ${host.version})`);
+        mqtt.publish(config.name + '/connected', '2', { retain: true });
+      } else {
+        log.error(`${host.url.host} is offline :(`);
+      }
+    });
+  });
 });
 
-function logCSV() {
-  var point = {};
-  
-  for(var i=0;i<topics.length;++i) {
-    point[topics[i]]=parseFloat(dataCache[topics[i]]);    
+mqtt.on('close', function () {
+  if (mqttConnected) {
+    mqttConnected = false;
+    log.info('mqtt closed ' + config.url);
   }
-  influxClient.writePoint('temp', point);
-  console.log(point);
+});
+
+mqtt.on('error', function (err) {
+  log.error('mqtt', err);
+});
+
+mqtt.on('message', (topic, message) => {
+  const topicPrefix = config.name + '/set/';
+  if (topic.startsWith(topicPrefix)) {
+    const measurement = topic.substring(topicPrefix.length);
+    var payload = JSON.parse(message.toString());
+    var timestamp = new Date();
+    if (payload.ts) { // convert to ms timestamp
+      if (payload.ts < 15120042550) {
+        payload.ts = payload.ts * 1000;
+      }
+      timestamp = new Date(payload.ts);
+    }
+    var point = {
+      measurement: measurement,
+      tags: payload.tags,
+      timestamp: timestamp,
+      fields: {}
+    };
+
+    if (payload.fields !== undefined) {
+      point.fields = payload.fields;
+    }
+    if (payload.val !== undefined) {
+      point.fields.value = payload.val;
+    }
+    // log.debug(point);
+    buffer.push(point);
+    bufferCount += 1;
+    if (bufferCount >= 1000) writeInflux();
+  }
+});
+
+function writeInflux () {
+  if (!bufferCount) return;
+  if (!influxDBConnected) return;
+  log.debug('write', bufferCount);
+
+  influx.writePoints(buffer).then(() => {
+    log.debug('wrote', bufferCount);
+  }).catch(err => {
+    console.error(`Error saving data to InfluxDB! ${err.stack}`);
+  });
+
+  buffer = [];
+  bufferCount = 0;
 }
 
-var timer = setInterval(logCSV, 60000);
-
-
-
-
-//client.end();
-
+setInterval(writeInflux, 60000);
