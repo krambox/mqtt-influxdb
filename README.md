@@ -31,6 +31,4 @@ Or via direct call
 
     docker build -t mqtt2influxdb .
 
-    docker run --env-file ./mqtt2influxdb.env -it km200 krambox/mqtt2influxdb 
-
-    docker run --env-file /Volumes/data/smarthome/mqtt2influxdb.env -v /Volumes/data/smarthome:/data --name buderus2mqtt krambox/mqtt2influxdb
+    docker run --env-file ./mqtt2influxdb.env -it mqtt2influxdb

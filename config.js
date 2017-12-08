@@ -12,18 +12,18 @@ var config = require('yargs')
     'n': 'name',
     'u': 'url',
     'v': 'verbosity',
-    'i': 'influx-host',
-    'p': 'influx-port',
-    'd': 'influx-db'
+    'i': 'influxHost',
+    'p': 'influxPort',
+    'd': 'influxDb'
 
   })
   .default({
     'u': 'mqtt://127.0.0.1',
     'n': 'influx',
     'v': 'info',
-    'influx-host': '127.0.0.1',
-    'influx-port': 8086,
-    'influx-db': 'mqtt'
+    'i': '127.0.0.1',
+    'p': 8086,
+    'd': 'mqtt'
   })
   .config('config')
   .version(pkg.name + ' ' + pkg.version + '\n', 'version')

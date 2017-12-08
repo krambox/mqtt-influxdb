@@ -5,6 +5,7 @@ var Influx = require('influx');
 var log = require('yalm');
 var config = require('./config.js');
 log.setLevel(config.verbosity);
+log.info(config);
 
 var mqttConnected;
 var influxDBConnected;
@@ -28,9 +29,9 @@ mqtt.on('connect', function () {
   mqtt.subscribe(config.name + '/set/#');
 
   influx = new Influx.InfluxDB({
-    host: config['influx-host'],
-    port: config['influx-port'],
-    database: config['influx-db']
+    host: config['influxHost'],
+    port: config['influxPort'],
+    database: config['influxDb']
   });
   influx.ping(5000).then(hosts => {
     hosts.forEach(host => {
@@ -81,7 +82,7 @@ mqtt.on('message', (topic, message) => {
     if (payload.val !== undefined) {
       point.fields.value = payload.val;
     }
-    // log.debug(point);
+    // log.debug(point)
     buffer.push(point);
     bufferCount += 1;
     if (bufferCount >= 1000) writeInflux();
@@ -94,7 +95,7 @@ function writeInflux () {
   log.debug('write', bufferCount);
 
   influx.writePoints(buffer).then(() => {
-    log.debug('wrote', bufferCount);
+    log.debug('wrote');
   }).catch(err => {
     console.error(`Error saving data to InfluxDB! ${err.stack}`);
   });

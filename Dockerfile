@@ -36,5 +36,4 @@ COPY --from=dependencies /root/app/prod_node_modules ./node_modules
 COPY package.json .
 COPY config.js .
 COPY mqtt2influxdb.js .
-VOLUME ["/data"]
 CMD ./mqtt2influxdb.js 
