@@ -36,6 +36,7 @@ mqtt.on('connect', function () {
       requestTimeout: 5000
     }
   });
+  checkInflux();
 });
 
 mqtt.on('close', function () {
@@ -84,14 +85,18 @@ mqtt.on('message', (topic, message) => {
 function writeInflux () {
   if (!bufferCount) return;
   if (!influxDBConnected) return;
-  log.debug('write', bufferCount);
+  log.log('write', bufferCount);
   influx.writePoints(buffer).then(() => {
-    log.debug('wrote');
+    log.log('wrote');
     buffer = [];
     bufferCount = 0;
   }).catch(err => {
     log.error(`Error saving data to InfluxDB! ${err.stack}`);
   });
+}
+
+function checkInflux () {
+  log.log('checkInflux', influxDBConnected);
   influx.ping(5000).then(hosts => {
     hosts.forEach(host => {
       if (host.online) {
@@ -101,9 +106,11 @@ function writeInflux () {
       } else {
         mqtt.publish(config.name + '/connected', '1', { retain: true });
         log.error(`${host.url.host} is offline :(`);
+        influxDBConnected = true;
       }
     });
   });
 }
 
 setInterval(writeInflux, 60000);
+setInterval(checkInflux, 60000);
