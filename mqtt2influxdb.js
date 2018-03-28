@@ -36,18 +36,6 @@ mqtt.on('connect', function () {
       requestTimeout: 5000
     }
   });
-  influx.ping(5000).then(hosts => {
-    hosts.forEach(host => {
-      if (host.online) {
-        influxDBConnected = true;
-        log.log(`${host.url.host} responded in ${host.rtt}ms running ${host.version})`);
-        mqtt.publish(config.name + '/connected', '2', { retain: true });
-      } else {
-        mqtt.publish(config.name + '/connected', '1', { retain: true });
-        log.error(`${host.url.host} is offline :(`);
-      }
-    });
-  });
 });
 
 mqtt.on('close', function () {
@@ -99,6 +87,8 @@ function writeInflux () {
   log.debug('write', bufferCount);
   influx.writePoints(buffer).then(() => {
     log.debug('wrote');
+    buffer = [];
+    bufferCount = 0;
   }).catch(err => {
     log.error(`Error saving data to InfluxDB! ${err.stack}`);
   });
@@ -114,9 +104,6 @@ function writeInflux () {
       }
     });
   });
-
-  buffer = [];
-  bufferCount = 0;
 }
 
 setInterval(writeInflux, 60000);
