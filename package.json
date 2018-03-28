@@ -34,11 +34,11 @@
     "mqtt": "^2.14.0",
     "request": "^2.83.0",
     "yalm": "^4.1.0",
-    "yargs": "^10.0.3"
+    "yargs": "^11.0.0"
   },
   "devDependencies": {
     "pre-commit": "^1.2.2",
-    "semantic-release": "^11.0.2",
+    "semantic-release": "^15.1.4",
     "semistandard": "^12.0.0"
   },
   "pre-commit": [
